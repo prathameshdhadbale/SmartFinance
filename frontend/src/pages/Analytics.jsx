@@ -18,12 +18,17 @@ import {
 } from 'recharts';
 
 const Analytics = () => {
+  // ⭐ IMPORTANT — Backend base URL
+  const API = import.meta.env.VITE_API_URL;
+
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('monthly');
   const [dateView, setDateView] = useState(null);
   const [viewType, setViewType] = useState('today');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split('T')[0]
+  );
 
   const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -37,9 +42,12 @@ const Analytics = () => {
     }
   }, [viewType, selectedDate]);
 
+  // ================= FETCH ANALYTICS =================
   const fetchAnalytics = async () => {
     try {
-      const res = await axios.get(`/api/analytics?period=${period}`);
+      const res = await axios.get(`${API}/analytics`, {
+        params: { period },
+      });
       setAnalytics(res.data);
     } catch (error) {
       toast.error('Failed to load analytics');
@@ -48,9 +56,10 @@ const Analytics = () => {
     }
   };
 
+  // ================= FETCH DATE VIEW =================
   const fetchDateView = async () => {
     try {
-      const res = await axios.get('/api/analytics/date-view', {
+      const res = await axios.get(`${API}/analytics/date-view`, {
         params: { view: viewType, date: selectedDate },
       });
       setDateView(res.data);
@@ -70,8 +79,7 @@ const Analytics = () => {
   // Prepare chart data
   const incomeData = analytics?.trends.income || [];
   const expenseData = analytics?.trends.expense || [];
-  
-  // Combine income and expense for line chart
+
   const combinedData = [];
   const allDates = new Set([
     ...incomeData.map((d) => d.date),
@@ -82,7 +90,10 @@ const Analytics = () => {
     const income = incomeData.find((d) => d.date === date)?.amount || 0;
     const expense = expenseData.find((d) => d.date === date)?.amount || 0;
     combinedData.push({
-      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
       income,
       expense,
     });
@@ -141,7 +152,9 @@ const Analytics = () => {
       {/* Income vs Expense Trend */}
       {combinedData.length > 0 && (
         <div className="card mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Income vs Expense Trend</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Income vs Expense Trend
+          </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={combinedData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -149,132 +162,39 @@ const Analytics = () => {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="income"
-                stroke="#10b981"
-                strokeWidth={2}
-                name="Income"
-              />
-              <Line
-                type="monotone"
-                dataKey="expense"
-                stroke="#ef4444"
-                strokeWidth={2}
-                name="Expense"
-              />
+              <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Category Breakdown */}
-      {analytics?.categories && analytics.categories.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Expense by Category</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analytics.categories}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="amount" fill="#0ea5e9" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Category Distribution</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analytics.categories}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ category, percent }) =>
-                    `${category}: ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="amount"
-                >
-                  {analytics.categories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* Date-Based View */}
+      {dateView && (
+        <div className="card">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Date-Based View</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-green-700 font-medium">Total Income</p>
+              <p className="text-2xl font-bold text-green-900">
+                ${dateView.totals.totalIncome.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <p className="text-sm text-red-700 font-medium">Total Expense</p>
+              <p className="text-2xl font-bold text-red-900">
+                ${dateView.totals.totalExpense.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-700 font-medium">Net Savings</p>
+              <p className="text-2xl font-bold text-blue-900">
+                ${dateView.totals.netSavings.toFixed(2)}
+              </p>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Date-Based View */}
-      <div className="card">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Date-Based View</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              View Type
-            </label>
-            <select
-              value={viewType}
-              onChange={(e) => setViewType(e.target.value)}
-              className="input-field"
-            >
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Date
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="input-field"
-            />
-          </div>
-        </div>
-
-        {dateView && (
-          <div className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <p className="text-sm text-green-700 font-medium">Total Income</p>
-                <p className="text-2xl font-bold text-green-900">
-                  ${dateView.totals.totalIncome.toFixed(2)}
-                </p>
-              </div>
-              <div className="bg-red-50 p-4 rounded-lg">
-                <p className="text-sm text-red-700 font-medium">Total Expense</p>
-                <p className="text-2xl font-bold text-red-900">
-                  ${dateView.totals.totalExpense.toFixed(2)}
-                </p>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-700 font-medium">Net Savings</p>
-                <p className="text-2xl font-bold text-blue-900">
-                  ${dateView.totals.netSavings.toFixed(2)}
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600">
-              Showing {dateView.transactions.length} transaction(s) for{' '}
-              {viewType === 'today' && 'today'}
-              {viewType === 'week' && 'this week'}
-              {viewType === 'month' && 'this month'}
-              {viewType === 'year' && 'this year'}
-            </p>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
