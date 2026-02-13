@@ -6,16 +6,21 @@ export const createBudget = async (req, res) => {
     const { category, amount, month, year } = req.body;
     const userId = req.userId;
 
-    if (!category || !amount || !month || !year) {
+    if (!category || amount == null || !month || !year) {
       return res.status(400).json({ message: 'All fields are required' });
     }
+    const amountNum = Number(amount);
+    const monthNum = parseInt(month, 10);
+    const yearNum = parseInt(year, 10);
+    if (!Number.isFinite(amountNum) || amountNum < 0 || !Number.isFinite(monthNum) || monthNum < 1 || monthNum > 12 || !Number.isFinite(yearNum)) {
+      return res.status(400).json({ message: 'Invalid amount, month, or year' });
+    }
 
-    // Check if budget already exists
     const existingBudget = await Budget.findOne({
       userId,
-      category,
-      month,
-      year,
+      category: String(category).trim(),
+      month: monthNum,
+      year: yearNum,
     });
 
     if (existingBudget) {
@@ -24,10 +29,10 @@ export const createBudget = async (req, res) => {
 
     const budget = new Budget({
       userId,
-      category,
-      amount,
-      month,
-      year,
+      category: String(category).trim(),
+      amount: amountNum,
+      month: monthNum,
+      year: yearNum,
     });
 
     await budget.save();

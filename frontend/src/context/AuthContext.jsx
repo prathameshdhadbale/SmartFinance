@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client.js';
 
 const AuthContext = createContext();
 
@@ -15,34 +15,30 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ⭐ IMPORTANT — Backend Base URL from Vercel env
-  const API = import.meta.env.VITE_API_URL;
-
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
     if (token && userData) {
-      setUser(JSON.parse(userData));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      try {
+        setUser(JSON.parse(userData));
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
-  // ================= LOGIN =================
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API}/auth/login`, {
-        email,
-        password,
-      });
-
-      const { token, user } = response.data;
+      const response = await api.post('auth/login', { email, password });
+      const { token, user: u } = response.data;
 
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
+      localStorage.setItem('user', JSON.stringify(u));
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      setUser(u);
 
       return { success: true };
     } catch (error) {
@@ -53,21 +49,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ================= SIGNUP =================
   const signup = async (name, email, password) => {
     try {
-      const response = await axios.post(`${API}/auth/signup`, {
-        name,
-        email,
-        password,
-      });
-
-      const { token, user } = response.data;
+      const response = await api.post('auth/signup', { name, email, password });
+      const { token, user: u } = response.data;
 
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
+      localStorage.setItem('user', JSON.stringify(u));
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      setUser(u);
 
       return { success: true };
     } catch (error) {
@@ -78,11 +68,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ================= LOGOUT =================
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common.Authorization;
     setUser(null);
   };
 

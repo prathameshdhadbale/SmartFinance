@@ -155,7 +155,15 @@ SmartFinance/
    npm install
    ```
 
-3. **Start the development server**
+3. **Optional: Create `.env` for production API URL**
+   - For **local development**: leave `.env` unset or omit `VITE_API_URL`; the app uses the Vite proxy (`/api` → `http://localhost:5000`).
+   - For **production (e.g. Vercel)**: set `VITE_API_URL` to your backend URL (e.g. `https://your-app.onrender.com`) with no trailing slash.
+   ```bash
+   cp .env.example .env
+   # Edit .env and set VITE_API_URL=https://your-backend.onrender.com
+   ```
+
+4. **Start the development server**
    ```bash
    npm run dev
    ```
@@ -239,6 +247,42 @@ Authorization: Bearer <token>
 - **Budget Alerts**: Visual indicators when budgets are exceeded
 - **Search & Filters**: Easily find transactions by category, account, or date
 - **Mobile Responsive**: Works seamlessly on all device sizes
+
+## 🚀 Deployment (Vercel + Render + MongoDB Atlas)
+
+### Backend (Render)
+
+1. Create a **Web Service** on [Render](https://render.com). Connect your repo and set:
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Environment**: Add variables:
+     - `NODE_ENV` = `production`
+     - `MONGODB_URI` = your MongoDB Atlas connection string
+     - `JWT_SECRET` = a long random secret (generate one and keep it safe)
+     - Optional: `FRONTEND_URL` = your Vercel app URL (e.g. `https://your-app.vercel.app`)
+
+2. Deploy. Note your backend URL (e.g. `https://smartfinance-xxx.onrender.com`).
+
+### Frontend (Vercel)
+
+1. Create a new project on [Vercel](https://vercel.com) and import your repo.
+2. Set **Root Directory** to `frontend`.
+3. **Environment Variables**: Add `VITE_API_URL` = your Render backend URL (e.g. `https://smartfinance-xxx.onrender.com`) with no trailing slash.
+4. Deploy. The built app will call your Render API using `VITE_API_URL`.
+
+### Database (MongoDB Atlas)
+
+1. Create a cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+2. Get the connection string (e.g. `mongodb+srv://user:pass@cluster.mongodb.net/smartfinance`) and set it as `MONGODB_URI` on Render.
+3. In Atlas, ensure Network Access allows connections from anywhere (or add Render IPs if you restrict).
+
+### Summary
+
+| Environment   | Backend (Render)     | Frontend (Vercel)     |
+|---------------|----------------------|------------------------|
+| Local        | `http://localhost:5000` | `http://localhost:3000` (proxy to backend) |
+| Production   | Set `MONGODB_URI`, `JWT_SECRET`, optional `FRONTEND_URL` | Set `VITE_API_URL` to Render URL |
 
 ## 🐛 Troubleshooting
 

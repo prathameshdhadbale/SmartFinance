@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import toast from 'react-hot-toast';
 import {
   LineChart,
@@ -18,9 +18,6 @@ import {
 } from 'recharts';
 
 const Analytics = () => {
-  // ⭐ IMPORTANT — Backend base URL
-  const API = import.meta.env.VITE_API_URL;
-
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('monthly');
@@ -33,40 +30,37 @@ const Analytics = () => {
   const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   useEffect(() => {
-    fetchAnalytics();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await api.get('analytics', { params: { period } });
+        if (!cancelled) setAnalytics(res.data ?? null);
+      } catch {
+        if (!cancelled) toast.error('Failed to load analytics');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [period]);
 
   useEffect(() => {
-    if (viewType && selectedDate) {
-      fetchDateView();
-    }
+    if (!viewType || !selectedDate) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await api.get('analytics/date-view', {
+          params: { view: viewType, date: selectedDate },
+        });
+        if (!cancelled) setDateView(res.data ?? null);
+      } catch {
+        if (!cancelled) toast.error('Failed to load date view');
+      }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [viewType, selectedDate]);
-
-  // ================= FETCH ANALYTICS =================
-  const fetchAnalytics = async () => {
-    try {
-      const res = await axios.get(`${API}/analytics`, {
-        params: { period },
-      });
-      setAnalytics(res.data);
-    } catch (error) {
-      toast.error('Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ================= FETCH DATE VIEW =================
-  const fetchDateView = async () => {
-    try {
-      const res = await axios.get(`${API}/analytics/date-view`, {
-        params: { view: viewType, date: selectedDate },
-      });
-      setDateView(res.data);
-    } catch (error) {
-      toast.error('Failed to load date view');
-    }
-  };
 
   if (loading) {
     return (
@@ -76,30 +70,23 @@ const Analytics = () => {
     );
   }
 
-  // Prepare chart data
-  const incomeData = analytics?.trends.income || [];
-  const expenseData = analytics?.trends.expense || [];
-
-  const combinedData = [];
+  const incomeData = analytics?.trends?.income ?? [];
+  const expenseData = analytics?.trends?.expense ?? [];
   const allDates = new Set([
     ...incomeData.map((d) => d.date),
     ...expenseData.map((d) => d.date),
   ]);
-
-  allDates.forEach((date) => {
-    const income = incomeData.find((d) => d.date === date)?.amount || 0;
-    const expense = expenseData.find((d) => d.date === date)?.amount || 0;
-    combinedData.push({
-      date: new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
+  const combinedData = [...allDates].map((dateStr) => {
+    const income = incomeData.find((d) => d.date === dateStr)?.amount ?? 0;
+    const expense = expenseData.find((d) => d.date === dateStr)?.amount ?? 0;
+    return {
+      dateRaw: dateStr,
+      date: new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       income,
       expense,
-    });
+    };
   });
-
-  combinedData.sort((a, b) => new Date(a.date) - new Date(b.date));
+  combinedData.sort((a, b) => (a.dateRaw > b.dateRaw ? 1 : a.dateRaw < b.dateRaw ? -1 : 0));
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto">
@@ -162,34 +149,34 @@ const Analytics = () => {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} />
+              <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} name="Income" />
+              <Line type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} name="Expense" />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {/* Date-Based View */}
-      {dateView && (
+      {dateView && dateView.totals && (
         <div className="card">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Date-Based View</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="bg-green-50 p-4 rounded-lg">
               <p className="text-sm text-green-700 font-medium">Total Income</p>
               <p className="text-2xl font-bold text-green-900">
-                ${dateView.totals.totalIncome.toFixed(2)}
+                ${Number(dateView.totals.totalIncome).toFixed(2)}
               </p>
             </div>
             <div className="bg-red-50 p-4 rounded-lg">
               <p className="text-sm text-red-700 font-medium">Total Expense</p>
               <p className="text-2xl font-bold text-red-900">
-                ${dateView.totals.totalExpense.toFixed(2)}
+                ${Number(dateView.totals.totalExpense).toFixed(2)}
               </p>
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-blue-700 font-medium">Net Savings</p>
               <p className="text-2xl font-bold text-blue-900">
-                ${dateView.totals.netSavings.toFixed(2)}
+                ${Number(dateView.totals.netSavings).toFixed(2)}
               </p>
             </div>
           </div>

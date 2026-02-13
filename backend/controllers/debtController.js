@@ -5,14 +5,18 @@ export const createDebt = async (req, res) => {
     const { personName, amount, type, dueDate, notes } = req.body;
     const userId = req.userId;
 
-    if (!personName || !amount || !type) {
+    if (!personName || amount == null || !type) {
       return res.status(400).json({ message: 'Person name, amount, and type are required' });
+    }
+    const amountNum = Number(amount);
+    if (!Number.isFinite(amountNum) || amountNum < 0) {
+      return res.status(400).json({ message: 'Invalid amount' });
     }
 
     const debt = new Debt({
       userId,
-      personName,
-      amount,
+      personName: String(personName).trim(),
+      amount: amountNum,
       type,
       dueDate: dueDate ? new Date(dueDate) : undefined,
       notes: notes || '',

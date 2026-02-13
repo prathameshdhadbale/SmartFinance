@@ -10,11 +10,12 @@ export const createAccount = async (req, res) => {
       return res.status(400).json({ message: 'Name and type are required' });
     }
 
+    const balanceNum = Number(balance);
     const account = new Account({
       userId,
-      name,
+      name: String(name).trim(),
       type,
-      balance: balance || 0,
+      balance: Number.isFinite(balanceNum) ? balanceNum : 0,
     });
 
     await account.save();

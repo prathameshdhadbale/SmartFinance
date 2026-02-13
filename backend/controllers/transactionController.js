@@ -1,40 +1,43 @@
 import Transaction from '../models/Transaction.js';
 import Account from '../models/Account.js';
 
+const toNum = (v) => (v === undefined || v === null ? NaN : Number(v));
+const validNum = (v) => typeof v === 'number' && !Number.isNaN(v) && v >= 0;
+
 export const createTransaction = async (req, res) => {
   try {
     const { accountId, amount, type, category, date, note } = req.body;
     const userId = req.userId;
 
-    // Validation
-    if (!accountId || !amount || !type || !category) {
+    if (!accountId || amount == null || !type || !category) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
+    const amountNum = toNum(amount);
+    if (!validNum(amountNum)) {
+      return res.status(400).json({ message: 'Invalid amount' });
+    }
 
-    // Verify account belongs to user
     const account = await Account.findOne({ _id: accountId, userId });
     if (!account) {
       return res.status(404).json({ message: 'Account not found' });
     }
 
-    // Create transaction
     const transaction = new Transaction({
       userId,
       accountId,
-      amount,
+      amount: amountNum,
       type,
-      category,
-      date: date || new Date(),
-      note: note || '',
+      category: String(category).trim(),
+      date: date ? new Date(date) : new Date(),
+      note: note != null ? String(note).trim() : '',
     });
 
     await transaction.save();
 
-    // Update account balance
     if (type === 'income') {
-      account.balance += amount;
+      account.balance += amountNum;
     } else {
-      account.balance -= amount;
+      account.balance -= amountNum;
     }
     await account.save();
 
@@ -54,7 +57,6 @@ export const getTransactions = async (req, res) => {
     const { accountId, type, startDate, endDate, limit = 50 } = req.query;
 
     const query = { userId };
-
     if (accountId) query.accountId = accountId;
     if (type) query.type = type;
     if (startDate || endDate) {
@@ -63,10 +65,11 @@ export const getTransactions = async (req, res) => {
       if (endDate) query.date.$lte = new Date(endDate);
     }
 
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
     const transactions = await Transaction.find(query)
       .populate('accountId', 'name type')
       .sort({ date: -1 })
-      .limit(parseInt(limit));
+      .limit(limitNum);
 
     res.json(transactions);
   } catch (error) {
@@ -79,8 +82,10 @@ export const getTransactionById = async (req, res) => {
     const { id } = req.params;
     const userId = req.userId;
 
-    const transaction = await Transaction.findOne({ _id: id, userId })
-      .populate('accountId', 'name type');
+    const transaction = await Transaction.findOne({ _id: id, userId }).populate(
+      'accountId',
+      'name type'
+    );
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
@@ -96,56 +101,74 @@ export const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.userId;
-    const { amount, type, category, date, note, accountId } = req.body;
+    const { amount, type, category, date, note, accountId: newAccountIdRaw } = req.body;
 
     const transaction = await Transaction.findOne({ _id: id, userId });
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    const oldAccount = await Account.findById(transaction.accountId);
-    const newAccountId = accountId || transaction.accountId;
+    const newAccountId = newAccountIdRaw || transaction.accountId;
+    const oldAccount = await Account.findOne({ _id: transaction.accountId, userId });
     const newAccount = await Account.findOne({ _id: newAccountId, userId });
 
-    if (!newAccount) {
+    if (!oldAccount || !newAccount) {
       return res.status(404).json({ message: 'Account not found' });
     }
 
-    // Revert old transaction effect
-    if (oldAccount) {
-      if (transaction.type === 'income') {
-        oldAccount.balance -= transaction.amount;
-      } else {
-        oldAccount.balance += transaction.amount;
-      }
-      await oldAccount.save();
+    const amountNum = amount !== undefined ? toNum(amount) : transaction.amount;
+    const newType = type || transaction.type;
+    if (!validNum(amountNum)) {
+      return res.status(400).json({ message: 'Invalid amount' });
     }
 
-    // Update transaction
-    const oldAmount = transaction.amount;
-    const oldType = transaction.type;
+    const isSameAccount =
+      String(oldAccount._id) === String(newAccountId);
 
-    transaction.amount = amount !== undefined ? amount : transaction.amount;
-    transaction.type = type || transaction.type;
-    transaction.category = category || transaction.category;
+    if (isSameAccount) {
+      // Revert old effect and apply new effect on same account in one step
+      if (transaction.type === 'income') {
+        oldAccount.balance -= Number(transaction.amount);
+      } else {
+        oldAccount.balance += Number(transaction.amount);
+      }
+      if (newType === 'income') {
+        oldAccount.balance += amountNum;
+      } else {
+        oldAccount.balance -= amountNum;
+      }
+      await oldAccount.save();
+    } else {
+      // Revert on old account
+      if (transaction.type === 'income') {
+        oldAccount.balance -= Number(transaction.amount);
+      } else {
+        oldAccount.balance += Number(transaction.amount);
+      }
+      await oldAccount.save();
+      // Apply on new account
+      if (newType === 'income') {
+        newAccount.balance += amountNum;
+      } else {
+        newAccount.balance -= amountNum;
+      }
+      await newAccount.save();
+    }
+
+    transaction.amount = amountNum;
+    transaction.type = newType;
+    transaction.category = category != null ? String(category).trim() : transaction.category;
     transaction.date = date ? new Date(date) : transaction.date;
-    transaction.note = note !== undefined ? note : transaction.note;
+    transaction.note = note !== undefined ? String(note).trim() : transaction.note;
     transaction.accountId = newAccountId;
 
     await transaction.save();
 
-    // Apply new transaction effect
-    if (transaction.type === 'income') {
-      newAccount.balance += transaction.amount;
-    } else {
-      newAccount.balance -= transaction.amount;
-    }
-    await newAccount.save();
-
+    const balanceAccount = isSameAccount ? oldAccount : newAccount;
     res.json({
       message: 'Transaction updated successfully',
       transaction,
-      account: { balance: newAccount.balance },
+      account: { balance: balanceAccount.balance },
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -162,13 +185,15 @@ export const deleteTransaction = async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    // Update account balance
-    const account = await Account.findById(transaction.accountId);
+    const account = await Account.findOne({
+      _id: transaction.accountId,
+      userId,
+    });
     if (account) {
       if (transaction.type === 'income') {
-        account.balance -= transaction.amount;
+        account.balance -= Number(transaction.amount);
       } else {
-        account.balance += transaction.amount;
+        account.balance += Number(transaction.amount);
       }
       await account.save();
     }
