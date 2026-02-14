@@ -15,14 +15,14 @@ const Login = () => {
     setLoading(true);
 
     const result = await login(email, password);
-    
+
     if (result.success) {
       toast.success('Login successful!');
       navigate('/');
     } else {
       toast.error(result.message || 'Login failed');
     }
-    
+
     setLoading(false);
   };
 
@@ -33,10 +33,10 @@ const Login = () => {
           <h1 className="text-4xl font-bold text-primary-600 mb-2">SmartFinance</h1>
           <p className="text-gray-600">Track your finances smartly</p>
         </div>
-        
+
         <div className="card">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Login</h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -51,7 +51,7 @@ const Login = () => {
                 placeholder="your@email.com"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -65,7 +65,7 @@ const Login = () => {
                 placeholder="••••••••"
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -74,12 +74,12 @@ const Login = () => {
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
-          
+
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign up
-            </Link>
+            <Link to="/signup" className="text-primary-600 hover:text-primary-700 font-medium">Sign up</Link>
+            <br />
+            <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700">Forgot password?</Link>
           </p>
         </div>
       </div>

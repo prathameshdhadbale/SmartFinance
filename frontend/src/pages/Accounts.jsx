@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
+import { MdCreditCard, MdAccountBalanceWallet } from 'react-icons/md';
 
 const accountTypes = ['Bank Account', 'Credit Card', 'Debit Card', 'Cash Wallet'];
 
@@ -98,12 +99,12 @@ const Accounts = () => {
       </div>
 
       <div className="card bg-gradient-to-br from-primary-50 to-primary-100 border-primary-200 mb-6">
-        <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-primary-700 font-medium">Total Balance</p>
             <p className="text-3xl font-bold text-primary-900 mt-1">${totalBalance.toFixed(2)}</p>
           </div>
-          <span className="text-5xl" aria-hidden>💳</span>
+          <MdCreditCard className="text-5xl text-primary-700" aria-hidden />
         </div>
       </div>
 
@@ -128,7 +129,7 @@ const Accounts = () => {
                   <p className="text-sm text-gray-500 mt-1">{acc.type}</p>
                 </div>
                 <span className="text-3xl" aria-hidden>
-                  {acc.type === 'Cash Wallet' ? '💵' : '💳'}
+                  {acc.type === 'Cash Wallet' ? <MdAccountBalanceWallet /> : <MdCreditCard />}
                 </span>
               </div>
               <div className="mb-4">

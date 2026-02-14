@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { MdInbox, MdOutbox } from 'react-icons/md';
 
 const Debts = () => {
   const [debts, setDebts] = useState([]);
@@ -112,7 +113,7 @@ const Debts = () => {
               <p className="text-sm text-green-700 font-medium">Money to Receive</p>
               <p className="text-2xl font-bold text-green-900 mt-1">${totalToTake.toFixed(2)}</p>
             </div>
-            <span className="text-4xl" aria-hidden>📥</span>
+            <MdInbox className="text-4xl text-green-700" aria-hidden />
           </div>
         </div>
         <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
@@ -121,7 +122,7 @@ const Debts = () => {
               <p className="text-sm text-red-700 font-medium">Money to Give</p>
               <p className="text-2xl font-bold text-red-900 mt-1">${totalToGive.toFixed(2)}</p>
             </div>
-            <span className="text-4xl" aria-hidden>📤</span>
+            <MdOutbox className="text-4xl text-red-600" aria-hidden />
           </div>
         </div>
       </div>
@@ -162,7 +163,7 @@ const Debts = () => {
                   <h3 className="text-xl font-bold text-gray-900">{debt.personName}</h3>
                   <p className="text-sm text-gray-500">{debt.type === 'take' ? 'Money to receive' : 'Money to give'}</p>
                 </div>
-                <span className="text-3xl" aria-hidden>{debt.type === 'take' ? '📥' : '📤'}</span>
+                <span className="text-3xl" aria-hidden>{debt.type === 'take' ? <MdInbox /> : <MdOutbox />}</span>
               </div>
               <p className="text-2xl font-bold text-gray-900 mb-3">${Number(debt.amount).toFixed(2)}</p>
               {debt.dueDate && <p className="text-sm text-gray-600 mb-3">Due: {format(new Date(debt.dueDate), 'MMM dd, yyyy')}</p>}

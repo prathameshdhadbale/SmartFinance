@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { MdAttachMoney, MdMoneyOff, MdSavings, MdAccountBalance, MdAdd, MdBarChart } from 'react-icons/md';
 
 const Dashboard = () => {
   const [summary, setSummary] = useState({
@@ -94,7 +95,7 @@ const Dashboard = () => {
                 ${Number(summary.totalIncome).toFixed(2)}
               </p>
             </div>
-            <span className="text-4xl" aria-hidden>💰</span>
+            <MdAttachMoney className="text-4xl text-green-700" aria-hidden />
           </div>
         </div>
         <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
@@ -105,7 +106,7 @@ const Dashboard = () => {
                 ${Number(summary.totalExpense).toFixed(2)}
               </p>
             </div>
-            <span className="text-4xl" aria-hidden>💸</span>
+            <MdMoneyOff className="text-4xl text-red-600" aria-hidden />
           </div>
         </div>
         <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -116,7 +117,7 @@ const Dashboard = () => {
                 ${Number(summary.netSavings).toFixed(2)}
               </p>
             </div>
-            <span className="text-4xl" aria-hidden>💵</span>
+            <MdSavings className="text-4xl text-blue-700" aria-hidden />
           </div>
         </div>
         <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
@@ -125,7 +126,7 @@ const Dashboard = () => {
               <p className="text-sm text-purple-700 font-medium">Accounts</p>
               <p className="text-2xl font-bold text-purple-900 mt-1">{summary.accountCount}</p>
             </div>
-            <span className="text-4xl" aria-hidden>🏦</span>
+            <MdAccountBalance className="text-4xl text-purple-700" aria-hidden />
           </div>
         </div>
       </div>
@@ -136,7 +137,7 @@ const Dashboard = () => {
           className="card hover:shadow-md transition-shadow cursor-pointer border-2 border-dashed border-gray-300 hover:border-primary-500"
         >
           <div className="text-center">
-            <span className="text-4xl mb-2 block" aria-hidden>➕</span>
+            <MdAdd className="text-4xl mb-2 mx-auto" aria-hidden />
             <p className="font-medium text-gray-900">Add Transaction</p>
           </div>
         </Link>
@@ -145,7 +146,7 @@ const Dashboard = () => {
           className="card hover:shadow-md transition-shadow cursor-pointer border-2 border-dashed border-gray-300 hover:border-primary-500"
         >
           <div className="text-center">
-            <span className="text-4xl mb-2 block" aria-hidden>🏦</span>
+            <MdAccountBalance className="text-4xl mb-2 mx-auto text-primary-700" aria-hidden />
             <p className="font-medium text-gray-900">Manage Accounts</p>
           </div>
         </Link>
@@ -154,7 +155,7 @@ const Dashboard = () => {
           className="card hover:shadow-md transition-shadow cursor-pointer border-2 border-dashed border-gray-300 hover:border-primary-500"
         >
           <div className="text-center">
-            <span className="text-4xl mb-2 block" aria-hidden>📈</span>
+            <MdBarChart className="text-4xl mb-2 mx-auto text-primary-700" aria-hidden />
             <p className="font-medium text-gray-900">View Analytics</p>
           </div>
         </Link>
@@ -182,13 +183,13 @@ const Dashboard = () => {
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {t.type === 'income' ? '💰' : '💸'}
-                  </div>
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            t.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {t.type === 'income' ? <MdAttachMoney /> : <MdMoneyOff />}
+                        </div>
                   <div>
                     <p className="font-medium text-gray-900">{t.category ?? '—'}</p>
                     <p className="text-sm text-gray-500">
