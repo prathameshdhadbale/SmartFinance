@@ -6,7 +6,15 @@ import sgMail from '@sendgrid/mail';
 const makeOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 
 const sendEmail = async ({ to, subject, text }) => {
-  if (process.env.SENDGRID_API_KEY) {
+  try {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.log(`[DEV] Would send email to ${to}: ${subject}\n${text}`);
+      return;
+    }
+    if (!process.env.SMTP_FROM) {
+      console.error('[ERROR] SMTP_FROM not configured in environment');
+      throw new Error('SMTP_FROM not configured');
+    }
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     await sgMail.send({
       to,
@@ -15,10 +23,10 @@ const sendEmail = async ({ to, subject, text }) => {
       text,
       html: `<p>${text}</p>`,
     });
-  } else {
-    // Development fallback if no SendGrid key
-    // eslint-disable-next-line no-console
-    console.log(`Sending email to ${to}: ${subject}\n${text}`);
+    console.log(`[SendGrid] Email sent to ${to}`);
+  } catch (err) {
+    console.error('[SendGrid Error]', err.message, err.response?.body || err);
+    throw err;
   }
 };
 
@@ -44,6 +52,7 @@ export const sendOtp = async (req, res) => {
 
     return res.json({ message: 'OTP sent' });
   } catch (err) {
+    console.error('[sendOtp Error]', err.message);
     return res.status(500).json({ message: 'Failed to send OTP', error: err.message });
   }
 };
@@ -92,6 +101,7 @@ export const verifyAndReset = async (req, res) => {
     await record.save();
     return res.json({ message: 'OTP verified' });
   } catch (err) {
+    console.error('[verifyAndReset Error]', err.message);
     return res.status(500).json({ message: 'Failed', error: err.message });
   }
 };
